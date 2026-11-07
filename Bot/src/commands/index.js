@@ -8,4 +8,6 @@ module.exports = [
   ...require("./embed"),
   ...require("./config"),
   ...require("./info"),
+  ...require("./weekly"),
+  ...require("./discord"),
 ];

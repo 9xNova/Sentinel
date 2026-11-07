@@ -63,10 +63,9 @@ module.exports = [
         });
       }
 
-      if (current && current.id !== role.id) {
-        await member.roles.remove(current, `Promotion by ${i.user.tag}`).catch(() => {});
+      if (!member.roles.cache.has(role.id)) {
+        await member.roles.add(role, `Promotion by ${i.user.tag}: ${i.options.getString("reason")}`);
       }
-      await member.roles.add(role, `Promotion by ${i.user.tag}: ${i.options.getString("reason")}`);
 
       const c = create(
         "Promotion",
@@ -90,76 +89,6 @@ module.exports = [
       await member
         .send(
           `You have been promoted to **${role.name}** in **${i.guild.name}**.\nReason: ${c.reason}`
-        )
-        .catch(() => {});
-
-      return i.reply({ embeds: [e] });
-    },
-  },
-  {
-    data: new SlashCommandBuilder()
-      .setName("infraction")
-      .setDescription("Issue a staff infraction")
-      .addUserOption((o) =>
-        o.setName("member").setDescription("Staff member").setRequired(true)
-      )
-      .addStringOption((o) =>
-        o
-          .setName("punishment")
-          .setDescription("Punishment")
-          .setRequired(true)
-          .addChoices(
-            ...[
-              "Strike 1",
-              "Strike 2",
-              "Strike 3",
-              "Suspension",
-              "Termination",
-            ].map((x) => ({ name: x, value: x }))
-          )
-      )
-      .addStringOption((o) =>
-        o.setName("reason").setDescription("Reason").setRequired(true)
-      ),
-    async execute(i) {
-      if (!canIssueInfractions(i.member)) {
-        return i.reply({
-          content: "You do not have permission to issue infractions.",
-          ephemeral: true,
-        });
-      }
-
-      const member = await i.guild.members
-        .fetch(i.options.getUser("member").id)
-        .catch(() => null);
-      if (!member) {
-        return i.reply({ content: "Member not found.", ephemeral: true });
-      }
-
-      const punishment = i.options.getString("punishment");
-      const reason = i.options.getString("reason");
-
-      const c = create("Infraction", member, i.user, reason, "", { punishment });
-
-      const e = makeEmbed(
-        "Staff Infraction",
-        `${member} received **${punishment}**.\n**Reason:** ${reason}`,
-        COLORS.red
-      ).addFields(
-        { name: "Case", value: String(c.id), inline: true },
-        { name: "Issued by", value: String(i.user), inline: true }
-      );
-
-      const roleId = get(i.guildId).punishment_roles?.[punishment];
-      if (roleId) {
-        const role = await i.guild.roles.fetch(String(roleId)).catch(() => null);
-        if (role) await member.roles.add(role).catch(() => {});
-      }
-
-      await sendLog(i.guild, "infraction_log_channel", e);
-      await member
-        .send(
-          `A staff infraction was issued to you in **${i.guild.name}**.\nPunishment: ${punishment}\nReason: ${reason}`
         )
         .catch(() => {});
 

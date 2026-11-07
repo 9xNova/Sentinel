@@ -25,6 +25,9 @@ require("./events/messageCreate")(client);
 require("./events/interactionCreate")(client);
 require("./events/logging")(client);
 
+const { startExpirationLoop } = require("./utils/expiration");
+client.once("ready", () => startExpirationLoop(client));
+
 if (!process.env.DISCORD_TOKEN) {
   console.error("DISCORD_TOKEN is missing from .env");
   process.exit(1);
