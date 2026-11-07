@@ -1,2 +1,22 @@
-const {read,write}=require("../utils/storage");
-module.exports=client=>client.on("messageCreate",message=>{if(message.author.bot||!message.guild)return;const week=new Date();week.setUTCHours(0,0,0,0);week.setUTCDate(week.getUTCDate()-((week.getUTCDay()+6)%7));const key=`${message.guild.id}:${message.author.id}:${week.toISOString().slice(0,10)}`;const data=read("weekly-quota.json",{});data[key]=(data[key]||0)+1;write("weekly-quota.json",data);});
+const { read, write } = require("../utils/storage");
+
+module.exports = (client) =>
+  client.on("messageCreate", (message) => {
+    if (message.author.bot || !message.guild) return;
+
+    try {
+      const week = new Date();
+      week.setUTCHours(0, 0, 0, 0);
+      week.setUTCDate(week.getUTCDate() - ((week.getUTCDay() + 6) % 7));
+
+      const key = `${message.guild.id}:${message.author.id}:${week
+        .toISOString()
+        .slice(0, 10)}`;
+
+      const data = read("weekly-quota.json", {});
+      data[key] = (data[key] || 0) + 1;
+      write("weekly-quota.json", data);
+    } catch (error) {
+      console.error("Failed to update weekly quota:", error);
+    }
+  });

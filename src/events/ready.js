@@ -1,1 +1,5 @@
-module.exports=client=>{client.once("ready",()=>{console.log(`Sentinel online as ${client.user.tag}`);client.user.setActivity("Staff Applications",{type:5});});};
+module.exports = (client) =>
+  client.once("ready", () => {
+    console.log(`Sentinel online as ${client.user.tag}`);
+    client.user.setActivity("Staff Applications", { type: 5 });
+  });

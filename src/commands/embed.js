@@ -1,10 +1,98 @@
-const {SlashCommandBuilder,ModalBuilder,TextInputBuilder,TextInputStyle,ActionRowBuilder,ButtonBuilder,ButtonStyle,EmbedBuilder,PermissionFlagsBits}=require("discord.js");
-module.exports=[
- {data:new SlashCommandBuilder().setName("embed").setDescription("Create and send a custom embed").setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
-  async execute(i){const modal=new ModalBuilder().setCustomId("embed:edit").setTitle("Embed Editor");
-   modal.addComponents(new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("title").setLabel("Embed title").setStyle(TextInputStyle.Short).setRequired(false)),new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("description").setLabel("Embed message").setStyle(TextInputStyle.Paragraph).setRequired(true)),new ActionRowBuilder().addComponents(new TextInputBuilder().setCustomId("color").setLabel("Color hex (example: #5865F2)").setStyle(TextInputStyle.Short).setRequired(false)));
-   return i.showModal(modal);}}
+const {
+  SlashCommandBuilder,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder,
+  PermissionFlagsBits,
+} = require("discord.js");
+
+module.exports = [
+  {
+    data: new SlashCommandBuilder()
+      .setName("embed")
+      .setDescription("Create and send a custom embed")
+      .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+    async execute(i) {
+      const modal = new ModalBuilder()
+        .setCustomId("embed:edit")
+        .setTitle("Embed Editor");
+
+      modal.addComponents(
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId("title")
+            .setLabel("Embed title")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+        ),
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId("description")
+            .setLabel("Embed message")
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+        ),
+        new ActionRowBuilder().addComponents(
+          new TextInputBuilder()
+            .setCustomId("color")
+            .setLabel("Color hex (example: #5865F2)")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+        )
+      );
+
+      return i.showModal(modal);
+    },
+  },
 ];
-async function handleEmbed(i){if(!i.isModalSubmit()||i.customId!=="embed:edit")return;const title=i.fields.getTextInputValue("title")||" ";const description=i.fields.getTextInputValue("description");let color=i.fields.getTextInputValue("color")||"#5865F2";if(!/^#?[0-9a-fA-F]{6}$/.test(color))color="#5865F2";color=parseInt(color.replace("#",""),16);const embed=new EmbedBuilder().setTitle(title).setDescription(description).setColor(color).setTimestamp();return i.reply({content:"Embed preview:",embeds:[embed],components:[new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("embed:send").setLabel("Send Embed").setStyle(ButtonStyle.Success))],ephemeral:true});}
-async function handleEmbedButton(i){if(!i.isButton()||i.customId!=="embed:send")return;const e=i.message.embeds[0];if(!e)return i.reply({content:"Embed preview missing.",ephemeral:true});await i.channel.send({embeds:[EmbedBuilder.from(e)]});return i.update({content:"Embed sent.",components:[]});}
-module.exports.handleEmbed=handleEmbed;module.exports.handleEmbedButton=handleEmbedButton;
+
+async function handleEmbed(i) {
+  if (!i.isModalSubmit() || i.customId !== "embed:edit") return;
+
+  const title = i.fields.getTextInputValue("title").trim();
+  const description = i.fields.getTextInputValue("description");
+  let color = i.fields.getTextInputValue("color").trim() || "#5865F2";
+
+  if (!/^#?[0-9a-fA-F]{6}$/.test(color)) color = "#5865F2";
+  color = parseInt(color.replace("#", ""), 16);
+
+  const embed = new EmbedBuilder()
+    .setDescription(description)
+    .setColor(color)
+    .setTimestamp();
+
+  if (title) embed.setTitle(title);
+
+  return i.reply({
+    content: "Embed preview:",
+    embeds: [embed],
+    components: [
+      new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId("embed:send")
+          .setLabel("Send Embed")
+          .setStyle(ButtonStyle.Success)
+      ),
+    ],
+    ephemeral: true,
+  });
+}
+
+async function handleEmbedButton(i) {
+  if (!i.isButton() || i.customId !== "embed:send") return;
+
+  const e = i.message.embeds[0];
+  if (!e) {
+    return i.reply({ content: "Embed preview missing.", ephemeral: true });
+  }
+
+  await i.channel.send({ embeds: [EmbedBuilder.from(e)] });
+  return i.update({ content: "Embed sent.", components: [] });
+}
+
+module.exports.handleEmbed = handleEmbed;
+module.exports.handleEmbedButton = handleEmbedButton;
