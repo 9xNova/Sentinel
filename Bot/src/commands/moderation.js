@@ -109,4 +109,36 @@ module.exports = [
       return i.reply({ content: `Unbanned ${id}.` });
     },
   },
+  {
+    data: new SlashCommandBuilder()
+      .setName("purge")
+      .setDescription("Delete a number of messages")
+      .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
+      .addIntegerOption((o) =>
+        o.setName("amount").setDescription("Number of messages (1-100)").setRequired(true).setMinValue(1).setMaxValue(100)
+      ),
+    async execute(i) {
+      const amount = i.options.getInteger("amount");
+      const channel = i.channel;
+      const deleted = await channel.bulkDelete(amount, true).catch(() => null);
+      if (!deleted) return i.reply({ content: "Failed to delete messages.", ephemeral: true });
+      return i.reply({ content: `Deleted ${deleted.size} message(s).`, ephemeral: true });
+    },
+  },
+  {
+    data: new SlashCommandBuilder()
+      .setName("untimeout")
+      .setDescription("Remove a timeout from a member")
+      .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
+      .addUserOption((o) => o.setName("member").setDescription("Member").setRequired(true))
+      .addStringOption((o) => o.setName("reason").setDescription("Reason").setRequired(false)),
+    async execute(i) {
+      const m = await i.guild.members.fetch(i.options.getUser("member").id).catch(() => null);
+      if (!m) return i.reply({ content: "Member not found.", ephemeral: true });
+      const reason = i.options.getString("reason") || "No reason provided";
+      await m.timeout(null, reason);
+      await sendLog(i.guild, "security_log_channel", makeEmbed("Timeout Removed", `${m.user.tag}'s timeout was removed.\nReason: ${reason}`));
+      return i.reply({ content: `Removed timeout from ${m.user.tag}.` });
+    },
+  },
 ];

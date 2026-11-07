@@ -23,6 +23,7 @@ client.commands = new Collection(commands.map((c) => [c.data.name, c]));
 require("./events/ready")(client);
 require("./events/messageCreate")(client);
 require("./events/interactionCreate")(client);
+require("./events/logging")(client);
 
 if (!process.env.DISCORD_TOKEN) {
   console.error("DISCORD_TOKEN is missing from .env");
