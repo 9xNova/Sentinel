@@ -32,7 +32,7 @@ async function expirePunishments(client) {
       const me = guild.members.me;
       for (const rid of c.roles_to_restore || []) {
         const role = guild.roles.cache.get(String(rid));
-        if (role && me && role.position < me.roles.highest.position && !role.id === guild.id && !member.roles.cache.has(role.id)) {
+        if (role && me && role.position < me.roles.highest.position && role.id !== guild.id && !member.roles.cache.has(role.id)) {
           toRestore.push(role);
         }
       }

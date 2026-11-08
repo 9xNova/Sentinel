@@ -2,6 +2,7 @@ module.exports = [
   ...require("./staff"),
   ...require("./moderation"),
   ...require("./warnings"),
+  ...require("./badwords"),
   ...require("./ticket"),
   ...require("./partnership"),
   ...require("./appeal"),

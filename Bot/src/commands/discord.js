@@ -1,15 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
 const { makeEmbed, sendLog } = require("../utils/embeds");
-const { get } = require("../utils/config");
 const S = require("../utils/security");
-
-function canManageSecurity(member) {
-  if (!member) return false;
-  if (member.permissions.has(PermissionFlagsBits.Administrator)) return true;
-  const cfg = get(member.guild.id);
-  return (cfg.bot_bypass_roles || []).some(() => false) || false;
-  // Fallback: allow admins only; configured roles could be added later.
-}
 
 module.exports = [
   {

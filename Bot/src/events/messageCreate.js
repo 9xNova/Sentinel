@@ -1,4 +1,6 @@
 const { read, write } = require("../utils/storage");
+const { makeEmbed, sendLog } = require("../utils/embeds");
+const B = require("../utils/badwords");
 const W = require("../utils/warnings");
 
 module.exports = (client) =>
@@ -6,16 +8,33 @@ module.exports = (client) =>
     if (message.author.bot || !message.guild) return;
 
     try {
+      const content = message.content || "";
+
       // Bad-word filter
-      const badwords = read("badwords.json", []);
-      const content = (message.content || "").toLowerCase();
-      if (Array.isArray(badwords) && badwords.some((w) => content.includes(String(w).toLowerCase()))) {
+      const matched = content ? B.check(message.guild.id, content, message.member) : null;
+      if (matched) {
         message.delete().catch(() => {});
         message.channel
           .send(`${message.author}, your message contained a prohibited word and was removed.`)
           .then((m) => setTimeout(() => m.delete().catch(() => {}), 5000))
           .catch(() => {});
-        W.add(message.guild.id, message.author.id, message.author.tag, "Bad word filter", client.user.id, "Sentinel");
+        W.add(
+          message.guild.id,
+          message.author.id,
+          message.author.tag,
+          `Bad word filter: ${matched}`,
+          client.user.id,
+          "Sentinel"
+        );
+        sendLog(
+          message.guild,
+          "security_log_channel",
+          makeEmbed(
+            "Message Blocked",
+            `**Member:** ${message.author.tag}\n**Word:** \`${matched}\`\n**Channel:** ${message.channel}\n**Content:** ${content.slice(0, 400)}`,
+            0xE74C3C
+          )
+        ).catch(() => {});
         return;
       }
 

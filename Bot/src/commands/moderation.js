@@ -135,7 +135,7 @@ module.exports = [
         expiresAt = new Date(Date.now() + PUNISHMENT_DURATIONS[duration]).toISOString();
 
         rolesToRestore = member.roles.cache
-          .filter((r) => !r.id === i.guild.id && r.id !== suspendedRole.id && !(cfg.bot_bypass_roles || []).includes(r.id))
+          .filter((r) => r.id !== i.guild.id && r.id !== suspendedRole.id && !(cfg.bot_bypass_roles || []).includes(r.id))
           .map((r) => r.id);
 
         const removable = member.roles.cache.filter((r) => r.id !== i.guild.id && r.id !== suspendedRole.id && botCanManageRole(i.guild, r));
