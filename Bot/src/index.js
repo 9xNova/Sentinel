@@ -7,6 +7,8 @@ const {
   Collection,
 } = require("discord.js");
 
+const { log, warn, error } = require("./utils/logger");
+
 const commands = require("./commands");
 const client = new Client({
   intents: [
@@ -25,26 +27,25 @@ require("./events/messageCreate")(client);
 require("./events/interactionCreate")(client);
 require("./events/logging")(client);
 
-const { startExpirationLoop } = require("./utils/expiration");
-client.once("ready", () => startExpirationLoop(client));
+const { startexpirationloop } = require("./utils/expiration");
+client.once("clientReady", () => startexpirationloop(client));
 
-const { connectMongo } = require("./utils/db");
+const { connectmongo } = require("./utils/db");
 
-process.on("unhandledRejection", (error) => {
-  console.error("Unhandled rejection:", error);
+process.on("unhandledRejection", (err) => {
+  error("Unhandled rejection:", err);
 });
 
 if (!process.env.DISCORD_TOKEN) {
-  console.error("DISCORD_TOKEN is missing from .env");
+  error("DISCORD_TOKEN is missing from .env");
   process.exit(1);
 }
 
-// Connect to the database first so no command runs against empty storage.
-connectMongo()
-  .catch((error) => console.error("Mongo connection failed:", error.message))
+connectmongo()
+  .catch((err) => error("Mongo connection failed:", err.message))
   .finally(() => {
-    client.login(process.env.DISCORD_TOKEN).catch((error) => {
-      console.error("Failed to log in:", error);
+    client.login(process.env.DISCORD_TOKEN).catch((err) => {
+      error("Failed to log in:", err);
       process.exit(1);
     });
   });

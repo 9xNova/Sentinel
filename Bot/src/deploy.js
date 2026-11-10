@@ -1,6 +1,7 @@
 require("dotenv").config();
 
 const { REST, Routes } = require("discord.js");
+const { log, error } = require("./utils/logger");
 const commands = require("./commands");
 
 (async () => {
@@ -13,8 +14,8 @@ const commands = require("./commands");
     body: commands.map((c) => c.data.toJSON()),
   });
 
-  console.log(`Registered ${commands.length} Sentinel slash commands.`);
-})().catch((error) => {
-  console.error(error);
+  log(`Registered ${commands.length} Sentinel slash commands.`);
+})().catch((err) => {
+  error(err);
   process.exit(1);
 });

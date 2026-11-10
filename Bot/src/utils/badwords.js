@@ -1,10 +1,8 @@
 const { PermissionFlagsBits } = require("discord.js");
 const { read, write } = require("./storage");
 
-const FILE = "badwords.json";
+const file = "badwords.json";
 
-// Lowercase and fold accents. Digits and punctuation are left alone so they
-// can act as decoys between and inside letters.
 function normalize(text) {
   let s = String(text).toLowerCase();
   if (s.normalize) s = s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
@@ -15,27 +13,23 @@ function lettersOnly(text) {
   return normalize(text).replace(/[^a-z]/g, "");
 }
 
-// Symbols people drop in place of a letter: f@ck, f*ck, b!tch, s|in...
-const DECOYS = "@$!*|+";
+const decoys = "@$!*|+";
 
-// A word matches when its letters show up in order, with a digit or decoy
-// symbol allowed where a letter should be ("f4ck") and any other non-letter
-// allowed in between ("f u c k", "f.u.c.k"). Patterns are cached per word.
 const patterns = new Map();
-function patternFor(word) {
+function patternfor(word) {
   let re = patterns.get(word);
   if (!re) {
     const body = word
       .split("")
-      .map((ch) => `(?:${ch}|[0-9]|[${DECOYS}])[^a-z0-9]*`)
+      .map((ch) => `(?:${ch}|[0-9]|[${decoys}])[^a-z0-9]*`)
       .join("");
-    re = new RegExp(body);
+    re = new RegExp(`\\b${body}\\b`);
     patterns.set(word, re);
   }
   return re;
 }
 
-function uniqWords(list) {
+function uniqwords(list) {
   if (!Array.isArray(list)) return [];
   const seen = new Set();
   const out = [];
@@ -51,11 +45,10 @@ function uniqWords(list) {
 }
 
 function load() {
-  const data = read(FILE, {});
+  const data = read(file, {});
   const out = { shared: [], guilds: {} };
 
-  // Old shape: a plain array of words.
-  out.shared = uniqWords(Array.isArray(data) ? data : data.shared);
+  out.shared = uniqwords(Array.isArray(data) ? data : data.shared);
 
   const guilds =
     !Array.isArray(data) && data.guilds && typeof data.guilds === "object"
@@ -65,9 +58,9 @@ function load() {
     if (!guild || typeof guild !== "object") continue;
     out.guilds[id] = {
       enabled: guild.enabled !== false,
-      words: uniqWords(guild.words),
-      exemptRoles: Array.isArray(guild.exemptRoles)
-        ? guild.exemptRoles.map(String)
+      words: uniqwords(guild.words),
+      exemptroles: Array.isArray(guild.exemptroles)
+        ? guild.exemptroles.map(String)
         : [],
     };
   }
@@ -75,30 +68,29 @@ function load() {
 }
 
 function save(data) {
-  write(FILE, data);
+  write(file, data);
 }
 
-function entryFor(data, guildId) {
-  const key = String(guildId);
+function entryfor(data, guildid) {
+  const key = String(guildid);
   if (!data.guilds[key]) {
-    data.guilds[key] = { enabled: true, words: [], exemptRoles: [] };
+    data.guilds[key] = { enabled: true, words: [], exemptroles: [] };
   }
   return data.guilds[key];
 }
 
-// What this server sees: its own words plus the shared list.
-function get(guildId) {
+function get(guildid) {
   const data = load();
-  const entry = data.guilds[String(guildId)];
+  const entry = data.guilds[String(guildid)];
   return {
     enabled: !entry || entry.enabled !== false,
     words: entry ? [...entry.words] : [],
     shared: [...data.shared],
-    exemptRoles: entry ? [...entry.exemptRoles] : [],
+    exemptroles: entry ? [...entry.exemptroles] : [],
   };
 }
 
-function add(guildId, word) {
+function add(guildid, word) {
   const clean = String(word || "").trim().replace(/\s+/g, " ");
   if (!clean) return { ok: false, error: "Give me a word to add." };
   if (clean.length > 64) return { ok: false, error: "That is too long to filter." };
@@ -107,7 +99,7 @@ function add(guildId, word) {
   }
 
   const data = load();
-  const entry = entryFor(data, guildId);
+  const entry = entryfor(data, guildid);
   const key = clean.toLowerCase();
   const taken =
     data.shared.some((w) => w.toLowerCase() === key) ||
@@ -119,12 +111,12 @@ function add(guildId, word) {
   return { ok: true, word: clean };
 }
 
-function remove(guildId, word) {
+function remove(guildid, word) {
   const key = String(word || "").trim().toLowerCase();
   if (!key) return { ok: false, error: "Give me a word to remove." };
 
   const data = load();
-  const entry = data.guilds[String(guildId)];
+  const entry = data.guilds[String(guildid)];
   if (entry) {
     const index = entry.words.findIndex((w) => w.toLowerCase() === key);
     if (index >= 0) {
@@ -144,9 +136,9 @@ function remove(guildId, word) {
   return { ok: false, error: `\`${word}\` is not on the filter.` };
 }
 
-function clear(guildId) {
+function clear(guildid) {
   const data = load();
-  const entry = data.guilds[String(guildId)];
+  const entry = data.guilds[String(guildid)];
   if (!entry || !entry.words.length) return 0;
   const count = entry.words.length;
   entry.words = [];
@@ -154,51 +146,50 @@ function clear(guildId) {
   return count;
 }
 
-function setEnabled(guildId, enabled) {
+function setenabled(guildid, enabled) {
   const data = load();
-  const entry = entryFor(data, guildId);
+  const entry = entryfor(data, guildid);
   entry.enabled = Boolean(enabled);
   save(data);
   return entry.enabled;
 }
 
-function addExempt(guildId, roleId) {
-  const id = String(roleId);
+function addexempt(guildid, roleid) {
+  const id = String(roleid);
   const data = load();
-  const entry = entryFor(data, guildId);
-  if (entry.exemptRoles.includes(id)) {
+  const entry = entryfor(data, guildid);
+  if (entry.exemptroles.includes(id)) {
     return { ok: false, error: "That role is already exempt." };
   }
-  entry.exemptRoles.push(id);
+  entry.exemptroles.push(id);
   save(data);
-  return { ok: true, roleId: id };
+  return { ok: true, roleid: id };
 }
 
-function removeExempt(guildId, roleId) {
-  const id = String(roleId);
+function removeexempt(guildid, roleid) {
+  const id = String(roleid);
   const data = load();
-  const entry = data.guilds[String(guildId)];
+  const entry = entryfor(data, guildid);
   if (!entry) return { ok: false, error: "That role is not exempt." };
-  const index = entry.exemptRoles.indexOf(id);
+  const index = entry.exemptroles.indexOf(id);
   if (index < 0) return { ok: false, error: "That role is not exempt." };
-  entry.exemptRoles.splice(index, 1);
+  entry.exemptroles.splice(index, 1);
   save(data);
-  return { ok: true, roleId: id };
+  return { ok: true, roleid: id };
 }
 
-// Returns the matched word, or null when the message is fine.
-function check(guildId, content, member) {
+function check(guildid, content, member) {
   const data = load();
-  const entry = data.guilds[String(guildId)];
+  const entry = data.guilds[String(guildid)];
 
   if (entry && entry.enabled === false) return null;
 
   if (member) {
     if (member.permissions?.has?.(PermissionFlagsBits.ManageMessages)) return null;
     if (
-      entry?.exemptRoles?.length &&
+      entry?.exemptroles?.length &&
       member.roles?.cache &&
-      entry.exemptRoles.some((id) => member.roles.cache.has(id))
+      entry.exemptroles.some((id) => member.roles.cache.has(id))
     ) {
       return null;
     }
@@ -210,7 +201,7 @@ function check(guildId, content, member) {
   for (const word of [...data.shared, ...(entry?.words || [])]) {
     const needle = lettersOnly(word);
     if (needle.length < 2) continue;
-    if (patternFor(needle).test(haystack)) return word;
+    if (patternfor(needle).test(haystack)) return word;
   }
   return null;
 }
@@ -219,9 +210,9 @@ module.exports = {
   add,
   remove,
   clear,
-  setEnabled,
-  addExempt,
-  removeExempt,
+  setenabled,
+  addexempt,
+  removeexempt,
   get,
   check,
 };

@@ -1,5 +1,6 @@
 module.exports = [
   ...require("./staff"),
+  ...require("./security"),
   ...require("./moderation"),
   ...require("./warnings"),
   ...require("./badwords"),
@@ -7,7 +8,8 @@ module.exports = [
   ...require("./partnership"),
   ...require("./appeal"),
   ...require("./embed"),
-  ...require("./config"),
+  ...require("./setup"),
+  ...require("./help"),
   ...require("./info"),
   ...require("./weekly"),
   ...require("./discord"),

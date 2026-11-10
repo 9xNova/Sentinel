@@ -10,14 +10,14 @@ function create(type, member, actor, reason, details = "", extra = {}) {
   const item = {
     id,
     type,
-    guildId: member.guild.id,
-    memberId: member.id,
-    memberTag: member.user.tag,
-    actorId: actor.id,
-    actorTag: actor.tag || actor.user?.tag || "Unknown",
+    guildid: member.guild.id,
+    memberid: member.id,
+    membertag: member.user.tag,
+    actorid: actor.id,
+    actortag: actor.tag || actor.user?.tag || "Unknown",
     reason,
     details,
-    createdAt: new Date().toISOString(),
+    createdat: new Date().toISOString(),
     voided: false,
     ...extra,
   };
@@ -26,16 +26,16 @@ function create(type, member, actor, reason, details = "", extra = {}) {
   return item;
 }
 
-function find(id, guildId) {
+function find(id, guildid) {
   return all().find(
-    (x) => String(x.id) === String(id) && String(x.guildId) === String(guildId)
+    (x) => String(x.id) === String(id) && String(x.guildid) === String(guildid)
   );
 }
 
-function update(id, guildId, patch) {
+function update(id, guildid, patch) {
   const rows = all();
   const index = rows.findIndex(
-    (x) => String(x.id) === String(id) && String(x.guildId) === String(guildId)
+    (x) => String(x.id) === String(id) && String(x.guildid) === String(guildid)
   );
   if (index < 0) return null;
   rows[index] = { ...rows[index], ...patch };

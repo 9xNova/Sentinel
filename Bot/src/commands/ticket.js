@@ -9,7 +9,9 @@ const {
 
 const { get } = require("../utils/config");
 const { read, write } = require("../utils/storage");
-const { makeEmbed } = require("../utils/embeds");
+const { makeEmbed, sendlog } = require("../utils/embeds");
+
+const flagsephemeral = 1 << 6;
 
 module.exports = [
   {
@@ -25,7 +27,7 @@ module.exports = [
       ),
     async execute(i) {
       const channel = i.options.getChannel("channel") || i.channel;
-      const categories = Object.keys(get(i.guildId).ticket_categories || {});
+      const categories = Object.keys(get(i.guildId).ticketcategories || {});
       const label = categories[0] || "General Support";
 
       const row = new ActionRowBuilder().addComponents(
@@ -43,14 +45,80 @@ module.exports = [
       });
 
       return i.reply({
-        content: `Ticket panel posted in ${channel}.`,
-        ephemeral: true,
+        embeds: [makeEmbed("Ticket Panel Posted", `Ticket panel posted in ${channel}.`)],
+        flags: flagsephemeral,
+      });
+    },
+  },
+  {
+    data: new SlashCommandBuilder()
+      .setName("ticket")
+      .setDescription("Ticket management")
+      .addSubcommand((s) =>
+        s.setName("closerequest").setDescription("Request to close your ticket")
+      ),
+    async execute(i) {
+      const sub = i.options.getSubcommand();
+      if (sub !== "closerequest") return;
+
+      const rows = read("tickets.json", []);
+      const r = rows.find(
+        (x) =>
+          x.guildId === i.guildId &&
+          x.channelId === i.channelId &&
+          x.status === "open"
+      );
+
+      if (!r) {
+        return i.reply({
+          embeds: [makeEmbed("Error", "This is not an open ticket channel.", 0xEF4444)],
+          flags: flagsephemeral,
+        });
+      }
+
+      if (r.userId !== i.user.id) {
+        return i.reply({
+          embeds: [makeEmbed("Error", "Only the ticket owner can request a close.", 0xEF4444)],
+          flags: flagsephemeral,
+        });
+      }
+
+      r.status = "closerequested";
+      r.closerequestedat = new Date().toISOString();
+      r.closerequestedby = i.user.id;
+      write("tickets.json", rows);
+
+      const controls = new ActionRowBuilder().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`ticket:confirmclose:${r.channelId}`)
+          .setLabel("Confirm Close")
+          .setStyle(ButtonStyle.Danger)
+      );
+
+      await i.channel.send({
+        content: `${i.user} has requested to close this ticket. Staff, confirm below:`,
+        components: [controls],
+      });
+
+      await sendlog(
+        i.guild,
+        "securitylogchannel",
+        makeEmbed(
+          "Ticket Close Requested",
+          `**Ticket:** <#${r.channelId}>\n**Requested by:** ${i.user.tag}\n**Channel:** <#${r.channelId}>`,
+          0xF1C40F
+        )
+      ).catch(() => {});
+
+      return i.reply({
+        embeds: [makeEmbed("Close Request Submitted", "Close request submitted. A staff member must confirm it.", 0x10B981)],
+        flags: flagsephemeral,
       });
     },
   },
 ];
 
-async function handleTicket(interaction) {
+async function handleticket(interaction) {
   if (!interaction.isButton() || !interaction.customId.startsWith("ticket:")) {
     return;
   }
@@ -68,10 +136,8 @@ async function handleTicket(interaction) {
         .fetch(existing.channelId)
         .catch(() => null);
       return interaction.reply({
-        content: ch
-          ? `You already have a ticket: ${ch}`
-          : "You already have an open ticket.",
-        ephemeral: true,
+        embeds: [makeEmbed("Existing Ticket", ch ? `You already have a ticket: ${ch}` : "You already have an open ticket.", 0xF1C40F)],
+        flags: flagsephemeral,
       });
     }
 
@@ -103,7 +169,7 @@ async function handleTicket(interaction) {
       userId: interaction.user.id,
       channelId: channel.id,
       status: "open",
-      createdAt: new Date().toISOString(),
+      createdat: new Date().toISOString(),
     });
     write("tickets.json", rows);
 
@@ -126,8 +192,8 @@ async function handleTicket(interaction) {
     });
 
     return interaction.reply({
-      content: `Your ticket has been opened: ${channel}`,
-      ephemeral: true,
+      embeds: [makeEmbed("Ticket Opened", `Your ticket has been opened: ${channel}`, 0x10B981)],
+      flags: flagsephemeral,
     });
   }
 
@@ -139,8 +205,8 @@ async function handleTicket(interaction) {
 
     if (!r) {
       return interaction.reply({
-        content: "Ticket record not found.",
-        ephemeral: true,
+        embeds: [makeEmbed("Error", "Ticket record not found.", 0xEF4444)],
+        flags: flagsephemeral,
       });
     }
 
@@ -151,17 +217,55 @@ async function handleTicket(interaction) {
 
     if (!isOwner && !isStaff) {
       return interaction.reply({
-        content: "Only the ticket owner or staff can close this ticket.",
-        ephemeral: true,
+        embeds: [makeEmbed("Error", "Only the ticket owner or staff can close this ticket.", 0xEF4444)],
+        flags: flagsephemeral,
       });
     }
 
     r.status = "closed";
-    r.closedAt = new Date().toISOString();
+    r.closedat = new Date().toISOString();
     write("tickets.json", rows);
 
     await interaction.reply({
-      content: "Ticket closed. This channel will be deleted in 5 seconds.",
+      embeds: [makeEmbed("Ticket Closed", "This channel will be deleted in 5 seconds.", 0xEF4444)],
+    });
+
+    setTimeout(() => {
+      interaction.channel.delete("Ticket closed").catch(() => {});
+    }, 5000);
+  }
+
+  if (interaction.customId.startsWith("ticket:confirmclose:")) {
+    const channelId = interaction.customId.split(":").slice(2).join(":");
+    const rows = read("tickets.json", []);
+    const r = rows.find(
+      (x) => x.channelId === channelId && x.status === "closerequested"
+    );
+
+    if (!r) {
+      return interaction.reply({
+        embeds: [makeEmbed("Error", "No close request found for this ticket.", 0xEF4444)],
+        flags: flagsephemeral,
+      });
+    }
+
+    const isStaff = interaction.memberPermissions?.has(
+      PermissionFlagsBits.ManageChannels
+    );
+    if (!isStaff) {
+      return interaction.reply({
+        embeds: [makeEmbed("Error", "Only staff can confirm a ticket close request.", 0xEF4444)],
+        flags: flagsephemeral,
+      });
+    }
+
+    r.status = "closed";
+    r.closedat = new Date().toISOString();
+    r.closedby = interaction.user.id;
+    write("tickets.json", rows);
+
+    await interaction.reply({
+      embeds: [makeEmbed("Close Confirmed", "Close request confirmed. This channel will be deleted in 5 seconds.", 0xEF4444)],
     });
 
     setTimeout(() => {
@@ -170,4 +274,4 @@ async function handleTicket(interaction) {
   }
 }
 
-module.exports.handleTicket = handleTicket;
+module.exports.handleticket = handleticket;

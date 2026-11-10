@@ -1,14 +1,8 @@
-const {
-  SlashCommandBuilder,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  EmbedBuilder,
-  PermissionFlagsBits,
-} = require("discord.js");
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+
+const { makeEmbed, colors } = require("../utils/embeds");
+
+const flagsephemeral = 1 << 6;
 
 module.exports = [
   {
@@ -50,7 +44,7 @@ module.exports = [
   },
 ];
 
-async function handleEmbed(i) {
+async function handleembed(i) {
   if (!i.isModalSubmit() || i.customId !== "embed:edit") return;
 
   const title = i.fields.getTextInputValue("title").trim();
@@ -68,8 +62,7 @@ async function handleEmbed(i) {
   if (title) embed.setTitle(title);
 
   return i.reply({
-    content: "Embed preview:",
-    embeds: [embed],
+    embeds: [makeEmbed("Embed Preview", "", color).setDescription(description)],
     components: [
       new ActionRowBuilder().addComponents(
         new ButtonBuilder()
@@ -78,21 +71,21 @@ async function handleEmbed(i) {
           .setStyle(ButtonStyle.Success)
       ),
     ],
-    ephemeral: true,
+    flags: flagsephemeral,
   });
 }
 
-async function handleEmbedButton(i) {
+async function handleembedbutton(i) {
   if (!i.isButton() || i.customId !== "embed:send") return;
 
   const e = i.message.embeds[0];
   if (!e) {
-    return i.reply({ content: "Embed preview missing.", ephemeral: true });
+    return i.reply({ embeds: [makeEmbed("Error", "Embed preview missing.", colors.danger)], flags: flagsephemeral });
   }
 
   await i.channel.send({ embeds: [EmbedBuilder.from(e)] });
-  return i.update({ content: "Embed sent.", components: [] });
+  return i.update({ embeds: [makeEmbed("Embed Sent", "Embed sent to this channel.", colors.success)], components: [] });
 }
 
-module.exports.handleEmbed = handleEmbed;
-module.exports.handleEmbedButton = handleEmbedButton;
+module.exports.handleembed = handleembed;
+module.exports.handleembedbutton = handleembedbutton;

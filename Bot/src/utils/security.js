@@ -1,11 +1,11 @@
 const { read, write } = require("./storage");
 
 function load() {
-  return read("security_suspensions.json", {});
+  return read("securitysuspensions.json", {});
 }
 
 function save(data) {
-  write("security_suspensions.json", data);
+  write("securitysuspensions.json", data);
 }
 
 function get(guildId, memberId) {
@@ -19,8 +19,8 @@ function saveRecord(guildId, memberId, roles, reason, actorId) {
   data[String(guildId)][String(memberId)] = {
     roles,
     reason,
-    actorId: String(actorId),
-    createdAt: new Date().toISOString(),
+    actorid: String(actorId),
+    createdat: new Date().toISOString(),
   };
   save(data);
 }
@@ -45,17 +45,17 @@ async function applySecuritySuspension(member, actor, reason) {
   const guild = member.guild;
   const { get: getCfg } = require("./config");
   const cfg = getCfg(guild.id);
-  const suspendedRoleId = cfg.discord_suspended_role;
-  if (!suspendedRoleId) return { success: false, message: "The Discord Suspended role has not been configured." };
-  const suspendedRole = guild.roles.cache.get(String(suspendedRoleId)) || await guild.roles.fetch(String(suspendedRoleId)).catch(() => null);
+  const suspendedroleid = cfg.discordsuspendedrole;
+  if (!suspendedroleid) return { success: false, message: "The Discord Suspended role has not been configured." };
+  const suspendedRole = guild.roles.cache.get(String(suspendedroleid)) || await guild.roles.fetch(String(suspendedroleid)).catch(() => null);
   if (!suspendedRole) return { success: false, message: "The configured Discord Suspended role no longer exists." };
   if (!botCanManageRole(guild, suspendedRole)) return { success: false, message: "I cannot manage the Discord Suspended role." };
 
-  const originalRoles = member.roles.cache
+  const originalroles = member.roles.cache
     .filter((r) => r.id !== guild.id && r.id !== suspendedRole.id)
     .map((r) => r.id);
 
-  saveRecord(guild.id, member.id, originalRoles, reason, actor.id);
+  saveRecord(guild.id, member.id, originalroles, reason, actor.id);
 
   const removable = member.roles.cache.filter((r) => r.id !== guild.id && r.id !== suspendedRole.id && botCanManageRole(guild, r));
   try {
@@ -74,9 +74,9 @@ async function restoreSecuritySuspension(member, actor) {
 
   const { get: getCfg } = require("./config");
   const cfg = getCfg(guild.id);
-  const suspendedRoleId = cfg.discord_suspended_role;
-  if (suspendedRoleId) {
-    const suspendedRole = guild.roles.cache.get(String(suspendedRoleId));
+  const suspendedroleid = cfg.discordsuspendedrole;
+  if (suspendedroleid) {
+    const suspendedRole = guild.roles.cache.get(String(suspendedroleid));
     if (suspendedRole && member.roles.cache.has(suspendedRole.id)) {
       try { await member.roles.remove(suspendedRole, `Sentinel unsuspension by ${actor}`); }
       catch (e) { return { success: false, message: "I couldn't remove the Discord Suspended role." }; }
@@ -95,11 +95,11 @@ async function restoreSecuritySuspension(member, actor) {
   }
 
   if (skipped.length) {
-    record.pending_roles = (record.roles || []).filter((rid) => {
+    record.pendingroles = (record.roles || []).filter((rid) => {
       const role = guild.roles.cache.get(String(rid));
       return !role || !member.roles.cache.has(role.id);
     });
-    record.last_restore_attempt = new Date().toISOString();
+    record.lastrestoreattempt = new Date().toISOString();
     const data = load();
     if (!data[String(guild.id)]) data[String(guild.id)] = {};
     data[String(guild.id)][String(member.id)] = record;

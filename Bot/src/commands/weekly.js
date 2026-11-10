@@ -3,7 +3,9 @@ const { makeEmbed } = require("../utils/embeds");
 const { get } = require("../utils/config");
 const { read } = require("../utils/storage");
 
-const WEEKLY_QUOTA = 100;
+const flagsephemeral = 1 << 6;
+
+const weeklyquota = 100;
 
 module.exports = [
   {
@@ -14,47 +16,47 @@ module.exports = [
     async execute(i) {
       const guild = i.guild;
       const cfg = get(guild.id);
-      const quotaRoleId = cfg.weekly_quota_role;
-      if (!quotaRoleId) {
-        return i.reply({ content: "The weekly quota role has not been configured.", ephemeral: true });
+      const quotoroleid = cfg.weeklyquotorole;
+      if (!quotoroleid) {
+        return i.reply({ embeds: [makeEmbed("Error", "The weekly quota role has not been configured.", 0xEF4444)], flags: flagsephemeral });
       }
-      const role = await guild.roles.fetch(String(quotaRoleId)).catch(() => null);
+      const role = await guild.roles.fetch(String(quotoroleid)).catch(() => null);
       if (!role) {
-        return i.reply({ content: "The configured weekly quota role no longer exists.", ephemeral: true });
+        return i.reply({ embeds: [makeEmbed("Error", "The configured weekly quota role no longer exists.", 0xEF4444)], flags: flagsephemeral });
       }
 
       const members = role.members.filter((m) => !m.user.bot);
       const sorted = [...members.values()].sort((a, b) => {
-        const ca = getWeeklyCount(guild.id, a.id);
-        const cb = getWeeklyCount(guild.id, b.id);
+        const ca = getweeklycount(guild.id, a.id);
+        const cb = getweeklycount(guild.id, b.id);
         return cb - ca;
       });
 
-      const e = makeEmbed("Weekly Staff Quota", `Required messages: **${WEEKLY_QUOTA}**`);
+      const e = makeEmbed("Weekly Staff Quota", `Required messages: **${weeklyquota}**`);
       if (!sorted.length) {
-        e.setDescription(`Required messages: **${WEEKLY_QUOTA}**\n\nNo members currently have the quota role.`);
+        e.setDescription(`Required messages: **${weeklyquota}**\n\nNo members currently have the quota role.`);
       } else {
         const lines = sorted.slice(0, 20).map((m, idx) => {
-          const count = getWeeklyCount(guild.id, m.id);
-          const status = count >= WEEKLY_QUOTA ? "Complete" : "In progress";
-          return `**${idx + 1}.** ${m} — \`${count}/${WEEKLY_QUOTA}\` — ${status}`;
+          const count = getweeklycount(guild.id, m.id);
+          const status = count >= weeklyquota ? "Complete" : "In progress";
+          return `**${idx + 1}.** ${m} - \`${count}/${weeklyquota}\` - ${status}`;
         });
         e.addFields({ name: "Leaderboard", value: lines.join("\n"), inline: false });
       }
 
-      return i.reply({ embeds: [e], ephemeral: true });
+      return i.reply({ embeds: [e], flags: flagsephemeral });
     },
   },
 ];
 
-function getWeeklyCount(guildId, memberId) {
-  const data = read("weekly-quota.json", {});
-  const week = getWeekStart();
-  const key = `${guildId}:${memberId}:${week}`;
+function getweeklycount(guildid, memberid) {
+  const data = read("weeklyquota.json", {});
+  const week = getweekstart();
+  const key = `${guildid}:${memberid}:${week}`;
   return data[key] || 0;
 }
 
-function getWeekStart() {
+function getweekstart() {
   const d = new Date();
   d.setUTCHours(0, 0, 0, 0);
   d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));

@@ -1,28 +1,74 @@
-const { sendLog, makeEmbed } = require("../utils/embeds");
+const { sendlog, makeembed, colors } = require("../utils/embeds");
+
+function footer(guild, text) {
+  return `${text} | ${guild.name}`;
+}
 
 module.exports = (client) => {
   client.on("messageDelete", (message) => {
     if (!message.guild || message.author?.bot) return;
-    sendLog(
+    sendlog(
       message.guild,
-      "security_log_channel",
-      makeEmbed("Message Deleted", `**Author:** ${message.author?.tag || "Unknown"}\n**Channel:** ${message.channel}\n**Content:** ${message.content || "(none)"}`)
+      "securitylogchannel",
+      makeEmbed(
+        "Message Deleted",
+        null,
+        colors.danger
+      )
+        .setAuthor({
+          name: message.author.tag,
+          iconURL: message.author.displayAvatarURL({ dynamic: true }),
+        })
+        .addFields(
+          { name: "Author", value: `${message.author} (\`${message.author.id}\`)`, inline: true },
+          { name: "Channel", value: message.channel.toString(), inline: true },
+          { name: "Content", value: message.content || "*(no content)*", inline: false }
+        )
+        .setFooter({ text: footer(message.guild, "Message Deleted") })
     );
   });
 
   client.on("guildMemberAdd", (member) => {
-    sendLog(
+    sendlog(
       member.guild,
-      "security_log_channel",
-      makeEmbed("Member Joined", `${member.user.tag} (${member.id}) joined the server.`)
+      "securitylogchannel",
+      makeEmbed(
+        "Member Joined",
+        null,
+        colors.success
+      )
+        .setAuthor({
+          name: member.user.tag,
+          iconURL: member.user.displayAvatarURL({ dynamic: true }),
+        })
+        .addFields(
+          { name: "User", value: `${member.user} (\`${member.user.id}\`)`, inline: true },
+          { name: "Account Created", value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`, inline: true },
+          { name: "Member Count", value: String(member.guild.memberCount), inline: true }
+        )
+        .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+        .setFooter({ text: footer(member.guild, "Member Joined") })
     );
   });
 
   client.on("guildMemberRemove", (member) => {
-    sendLog(
+    sendlog(
       member.guild,
-      "security_log_channel",
-      makeEmbed("Member Left", `${member.user?.tag || member.id} left the server.`)
+      "securitylogchannel",
+      makeEmbed(
+        "Member Left",
+        null,
+        colors.warning
+      )
+        .setAuthor({
+          name: member.user?.tag || "Unknown",
+          iconURL: member.user.displayAvatarURL({ dynamic: true }),
+        })
+        .addFields(
+          { name: "User", value: `${member.user} (\`${member.user.id}\`)`, inline: true },
+          { name: "Member Count", value: String(member.guild.memberCount), inline: true }
+        )
+        .setFooter({ text: footer(member.guild, "Member Left") })
     );
   });
 };

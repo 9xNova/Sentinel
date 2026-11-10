@@ -1,24 +1,25 @@
 const mongoose = require("mongoose");
-const { enableMongo } = require("./storage");
+const { enablemongo } = require("./storage");
+const { warn, log } = require("./logger");
 
-async function connectMongo() {
+async function connectmongo() {
   const uri = process.env.MONGO_URI;
   if (!uri) {
-    console.warn("MONGO_URI not set, skipping Mongo connection.");
+    warn("MONGO_URI not set, skipping Mongo connection.");
     return false;
   }
 
   await mongoose.connect(uri, { serverSelectionTimeoutMS: 10000 });
 
   try {
-    await enableMongo();
+    await enablemongo();
   } catch (error) {
     await mongoose.disconnect().catch(() => {});
     throw error;
   }
 
-  console.log("Connected to MongoDB.");
+  log("Connected to MongoDB.");
   return true;
 }
 
-module.exports = { connectMongo, mongoose };
+module.exports = { connectmongo, mongoose };

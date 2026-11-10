@@ -1,5 +1,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
-const { makeEmbed, sendLog } = require("../utils/embeds");
+const { makeEmbed, sendlog, colors } = require("../utils/embeds");
+
+const flagsephemeral = 1 << 6;
 
 function botCanManageRole(guild, role) {
   const me = guild.members.me;
@@ -19,11 +21,21 @@ module.exports = [
       .addStringOption((o) => o.setName("reason").setDescription("Reason").setRequired(false)),
     async execute(i) {
       const m = await i.guild.members.fetch(i.options.getUser("member").id).catch(() => null);
-      if (!m) return i.reply({ content: "Member not found.", ephemeral: true });
+      if (!m) return i.reply({ embeds: [makeEmbed("Error", "Member not found.", colors.danger)], flags: flagsephemeral });
       const reason = i.options.getString("reason") || "No reason provided";
       await m.timeout(i.options.getInteger("minutes") * 60000, reason);
-      await sendLog(i.guild, "security_log_channel", makeEmbed("Member Timed Out", `${m} was timed out.\nReason: ${reason}`));
-      return i.reply({ content: `Timed out ${m.user.tag}.` });
+      await sendlog(
+        i.guild,
+        "securitylogchannel",
+        makeEmbed("Member Timed Out", null, colors.warning)
+          .setAuthor({ name: i.user.tag, iconURL: i.user.displayAvatarURL({ dynamic: true }) })
+          .addFields(
+            { name: "Member", value: `${m} (\`${m.id}\`)`, inline: true },
+            { name: "Duration", value: `${i.options.getInteger("minutes")} minutes`, inline: true },
+            { name: "Reason", value: reason, inline: false }
+          )
+      );
+      return i.reply({ embeds: [makeEmbed("Member Timed Out", `Timed out ${m.user.tag}.`, colors.success)], flags: flagsephemeral });
     },
   },
   {
@@ -37,8 +49,17 @@ module.exports = [
       const u = i.options.getUser("member");
       const reason = i.options.getString("reason") || "No reason provided";
       await i.guild.members.ban(u, { reason });
-      await sendLog(i.guild, "security_log_channel", makeEmbed("Member Banned", `${u.tag} was banned.\nReason: ${reason}`));
-      return i.reply({ content: `Banned ${u.tag}.` });
+      await sendlog(
+        i.guild,
+        "securitylogchannel",
+        makeEmbed("Member Banned", null, colors.danger)
+          .setAuthor({ name: i.user.tag, iconURL: i.user.displayAvatarURL({ dynamic: true }) })
+          .addFields(
+            { name: "User", value: `${u.tag} (\`${u.id}\`)`, inline: true },
+            { name: "Reason", value: reason, inline: false }
+          )
+      );
+      return i.reply({ embeds: [makeEmbed("Member Banned", `Banned ${u.tag}.`, colors.success)], flags: flagsephemeral });
     },
   },
   {
@@ -50,11 +71,20 @@ module.exports = [
       .addStringOption((o) => o.setName("reason").setDescription("Reason").setRequired(false)),
     async execute(i) {
       const m = await i.guild.members.fetch(i.options.getUser("member").id).catch(() => null);
-      if (!m) return i.reply({ content: "Member not found.", ephemeral: true });
+      if (!m) return i.reply({ embeds: [makeEmbed("Error", "Member not found.", colors.danger)], flags: flagsephemeral });
       const reason = i.options.getString("reason") || "No reason provided";
       await m.kick(reason);
-      await sendLog(i.guild, "security_log_channel", makeEmbed("Member Kicked", `${m.user.tag} was kicked.\nReason: ${reason}`));
-      return i.reply({ content: `Kicked ${m.user.tag}.` });
+      await sendlog(
+        i.guild,
+        "securitylogchannel",
+        makeEmbed("Member Kicked", null, colors.warning)
+          .setAuthor({ name: i.user.tag, iconURL: i.user.displayAvatarURL({ dynamic: true }) })
+          .addFields(
+            { name: "Member", value: `${m.user.tag} (\`${m.id}\`)`, inline: true },
+            { name: "Reason", value: reason, inline: false }
+          )
+      );
+      return i.reply({ embeds: [makeEmbed("Member Kicked", `Kicked ${m.user.tag}.`, colors.success)], flags: flagsephemeral });
     },
   },
   {
@@ -62,13 +92,13 @@ module.exports = [
       .setName("unban")
       .setDescription("Unban a user")
       .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
-      .addStringOption((o) => o.setName("user_id").setDescription("User ID").setRequired(true))
+      .addStringOption((o) => o.setName("userid").setDescription("User ID").setRequired(true))
       .addStringOption((o) => o.setName("reason").setDescription("Reason").setRequired(false)),
     async execute(i) {
-      const id = i.options.getString("user_id");
+      const id = i.options.getString("userid");
       const reason = i.options.getString("reason") || "No reason provided";
       await i.guild.members.unban(id, reason);
-      return i.reply({ content: `Unbanned ${id}.` });
+      return i.reply({ embeds: [makeEmbed("Member Unbanned", `Unbanned ${id}.`, colors.success)], flags: flagsephemeral });
     },
   },
   {
@@ -106,36 +136,36 @@ module.exports = [
       const duration = i.options.getString("duration");
 
       if (punishment === "Suspension" && !duration) {
-        return i.reply({ content: "You must select a duration for a suspension.", ephemeral: true });
+        return i.reply({ embeds: [makeEmbed("Error", "You must select a duration for a suspension.", colors.danger)], flags: flagsephemeral });
       }
       if (punishment !== "Suspension" && duration) {
-        return i.reply({ content: "A duration is only used for suspensions.", ephemeral: true });
+        return i.reply({ embeds: [makeEmbed("Error", "A duration is only used for suspensions.", colors.danger)], flags: flagsephemeral });
       }
 
       const member = await i.guild.members.fetch(i.options.getUser("member").id).catch(() => null);
-      if (!member) return i.reply({ content: "Member not found.", ephemeral: true });
+      if (!member) return i.reply({ embeds: [makeEmbed("Error", "Member not found.", colors.danger)], flags: flagsephemeral });
 
       const cfg = get(i.guildId);
-      const PUNISHMENT_DURATIONS = { "1h": 3600000, "6h": 21600000, "12h": 43200000, "1d": 86400000, "3d": 259200000, "7d": 604800000, "30d": 2592000000 };
+      const punishmentdurations = { "1h": 3600000, "6h": 21600000, "12h": 43200000, "1d": 86400000, "3d": 259200000, "7d": 604800000, "30d": 2592000000 };
 
-      let punishmentRoleId = cfg.punishment_roles?.[punishment] || null;
-      let expiresAt = null;
-      let rolesToRestore = [];
+      let punishmentroleid = cfg.punishmentroles?.[punishment] || null;
+      let expiresat = null;
+      let rolestorerestore = [];
 
-      await i.deferReply({ ephemeral: true });
+      await i.deferReply({ flags: flagsephemeral });
 
       if (punishment === "Suspension") {
-        if (!punishmentRoleId) {
-          return i.editReply({ content: "A Suspension role has not been configured. Use `/config`." });
+        if (!punishmentroleid) {
+          return i.editReply({ embeds: [makeEmbed("Error", "A Suspension role has not been configured. Use `/setup`.", colors.danger)] });
         }
-        const suspendedRole = await i.guild.roles.fetch(String(punishmentRoleId)).catch(() => null);
+        const suspendedRole = await i.guild.roles.fetch(String(punishmentroleid)).catch(() => null);
         if (!suspendedRole) {
-          return i.editReply({ content: "The configured Suspension role no longer exists." });
+          return i.editReply({ embeds: [makeEmbed("Error", "The configured Suspension role no longer exists.", colors.danger)] });
         }
-        expiresAt = new Date(Date.now() + PUNISHMENT_DURATIONS[duration]).toISOString();
+        expiresat = new Date(Date.now() + punishmentdurations[duration]).toISOString();
 
-        rolesToRestore = member.roles.cache
-          .filter((r) => r.id !== i.guild.id && r.id !== suspendedRole.id && !(cfg.bot_bypass_roles || []).includes(r.id))
+        rolestorerestore = member.roles.cache
+          .filter((r) => r.id !== i.guild.id && r.id !== suspendedRole.id && !(cfg.botbypassroles || []).includes(r.id))
           .map((r) => r.id);
 
         const removable = member.roles.cache.filter((r) => r.id !== i.guild.id && r.id !== suspendedRole.id && botCanManageRole(i.guild, r));
@@ -143,77 +173,83 @@ module.exports = [
           if (removable.size) await member.roles.remove([...removable.values()], "Sentinel suspension");
           await member.roles.add(suspendedRole, "Sentinel suspension");
         } catch (e) {
-          return i.editReply({ content: "I couldn't apply the suspension. Check my role permissions and hierarchy." });
+          return i.editReply({ embeds: [makeEmbed("Error", "I couldn't apply the suspension. Check my role permissions and hierarchy.", colors.danger)] });
         }
       } else if (["Strike 1", "Strike 2", "Strike 3"].includes(punishment)) {
-        if (!punishmentRoleId) {
-          return i.editReply({ content: `The ${punishment} role has not been configured.` });
+        if (!punishmentroleid) {
+          return i.editReply({ embeds: [makeEmbed("Error", `The ${punishment} role has not been configured.`, colors.danger)] });
         }
-        const role = await i.guild.roles.fetch(String(punishmentRoleId)).catch(() => null);
+        const role = await i.guild.roles.fetch(String(punishmentroleid)).catch(() => null);
         if (!role || !botCanManageRole(i.guild, role)) {
-          return i.editReply({ content: "I cannot manage the configured strike role." });
+          return i.editReply({ embeds: [makeEmbed("Error", "I cannot manage the configured strike role.", colors.danger)] });
         }
         try {
           await member.roles.add(role, `Sentinel ${punishment}`);
         } catch (e) {
-          return i.editReply({ content: "I couldn't apply the strike role." });
+          return i.editReply({ embeds: [makeEmbed("Error", "I couldn't apply the strike role.", colors.danger)] });
         }
       } else if (punishment === "Demotion") {
-        const { get: getPromotionRoles } = require("../utils/config");
-        // use config ladder
-        const ladder = (cfg.promotion_ladder || []).map((x) => String(x.id || x.role_id || x));
+        const ladder = (cfg.promotionladder || []).map((x) => String(x.id || x.roleid || x));
         const roles = await Promise.all(ladder.map((id) => i.guild.roles.fetch(id).catch(() => null)));
-        const promotionRoles = roles.filter(Boolean);
-        const memberRank = [...promotionRoles].reverse().find((r) => member.roles.cache.has(r.id));
-        if (!memberRank) {
-          return i.editReply({ content: "This member does not have a configured promotion role." });
+        const promotionroles = roles.filter(Boolean);
+        const memberrank = [...promotionroles].reverse().find((r) => member.roles.cache.has(r.id));
+        if (!memberrank) {
+          return i.editReply({ embeds: [makeEmbed("Error", "This member does not have a configured promotion role.", colors.danger)] });
         }
-        const idx = promotionRoles.indexOf(memberRank);
+        const idx = promotionroles.indexOf(memberrank);
         if (idx === 0) {
-          return i.editReply({ content: "This member is already at the lowest promotion rank." });
+          return i.editReply({ embeds: [makeEmbed("Error", "This member is already at the lowest promotion rank.", colors.danger)] });
         }
-        const lowerRole = promotionRoles[idx - 1];
-        if (!botCanManageRole(i.guild, lowerRole)) {
-          return i.editReply({ content: "I cannot manage the lower promotion role." });
+        const lowerrole = promotionroles[idx - 1];
+        if (!botCanManageRole(i.guild, lowerrole)) {
+          return i.editReply({ embeds: [makeEmbed("Error", "I cannot manage the lower promotion role.", colors.danger)] });
         }
         try {
-          await member.roles.remove(memberRank, "Sentinel demotion");
-          await member.roles.add(lowerRole, "Sentinel demotion");
+          await member.roles.remove(memberrank, "Sentinel demotion");
+          await member.roles.add(lowerrole, "Sentinel demotion");
         } catch (e) {
-          return i.editReply({ content: "I couldn't apply the demotion." });
+          return i.editReply({ embeds: [makeEmbed("Error", "I couldn't apply the demotion.", colors.danger)] });
         }
-        punishmentRoleId = lowerRole.id;
-        await member.send({ embeds: [makeEmbed("Staff Demotion", `You have been demoted in **${i.guild.name}**.\n**Your updated role:** ${lowerRole.name}\n**Reason:** ${reason}`, 0xE67E22)] }).catch(() => {});
+        punishmentroleid = lowerrole.id;
+        await member.send({ embeds: [makeEmbed("Staff Demotion", `You have been demoted in **${i.guild.name}**.\n**Your updated role:** ${lowerrole.name}\n**Reason:** ${reason}`, 0xE67E22)] }).catch(() => {});
       } else if (punishment === "Termination") {
-        const ladder = (cfg.promotion_ladder || []).map((x) => String(x.id || x.role_id || x));
+        const ladder = (cfg.promotionladder || []).map((x) => String(x.id || x.roleid || x));
         const roles = await Promise.all(ladder.map((id) => i.guild.roles.fetch(id).catch(() => null)));
-        const promotionRoles = roles.filter(Boolean);
-        const toRemove = promotionRoles.filter((r) => member.roles.cache.has(r.id) && botCanManageRole(i.guild, r));
+        const promotionroles = roles.filter(Boolean);
+        const toremove = promotionroles.filter((r) => member.roles.cache.has(r.id) && botCanManageRole(i.guild, r));
         try {
-          if (toRemove.length) await member.roles.remove(toRemove, "Sentinel termination");
+          if (toremove.length) await member.roles.remove(toremove, "Sentinel termination");
         } catch (e) {
-          return i.editReply({ content: "I couldn't remove the member's promotion roles." });
+          return i.editReply({ embeds: [makeEmbed("Error", "I couldn't remove the member's promotion roles.", colors.danger)] });
         }
       }
 
       const c = create("Infraction", member, i.user, reason, details, {
         punishment,
-        expires_at: expiresAt,
-        punishment_role_id: punishmentRoleId,
-        roles_to_restore: rolesToRestore,
+        expiresat: expiresat,
+        punishmentroleid: punishmentroleid,
+        rolestorerestore: rolestorerestore,
       });
 
       const e = makeEmbed(
         "Staff Infraction",
-        `**Member:** ${member}\n**Punishment:** ${punishment}\n**Issued by:** ${i.user}\n**Reason:** ${reason}\n**Details:** ${details}\n**Duration:** ${duration || "Permanent / Not required"}\n**Case ID:** \`${c.id}\``,
+        null,
         0xE74C3C
-      );
+      )
+        .setAuthor({ name: i.user.tag, iconURL: i.user.displayAvatarURL({ dynamic: true }) })
+        .addFields(
+          { name: "Member", value: `${member} (\`${member.id}\`)`, inline: true },
+          { name: "Punishment", value: punishment, inline: true },
+          { name: "Reason", value: reason, inline: false },
+          { name: "Details", value: details, inline: false },
+          { name: "Duration", value: duration || "Permanent / Not required", inline: true },
+          { name: "Case ID", value: `\`${c.id}\``, inline: true }
+        );
 
-      await sendLog(i.guild, "infraction_log_channel", e);
+      await sendlog(i.guild, "infractionlogchannel", e);
 
-      await i.editReply({ content: `Successfully issued **${punishment}** to ${member}. Case ID: \`${c.id}\`` });
+      await i.editReply({ embeds: [makeEmbed("Infraction Issued", `Successfully issued **${punishment}** to ${member}. Case ID: \`${c.id}\``, colors.success)] });
 
-      // DM
       if (punishment !== "Demotion") {
         await member.send({ embeds: [makeEmbed("Staff Infraction", `A staff infraction was issued to you in **${i.guild.name}**.\nPunishment: ${punishment}\nReason: ${reason}`, 0xE74C3C)] }).catch(() => {});
       }
@@ -228,8 +264,8 @@ module.exports = [
     async execute(i) {
       const amount = i.options.getInteger("amount");
       const deleted = await i.channel.bulkDelete(amount, true).catch(() => null);
-      if (!deleted) return i.reply({ content: "Failed to delete messages.", ephemeral: true });
-      return i.reply({ content: `Deleted ${deleted.size} message(s).`, ephemeral: true });
+      if (!deleted) return i.reply({ embeds: [makeEmbed("Error", "Failed to delete messages.", colors.danger)], flags: flagsephemeral });
+      return i.reply({ embeds: [makeEmbed("Purged", `Deleted ${deleted.size} message(s).`, colors.success)], flags: flagsephemeral });
     },
   },
   {
@@ -241,11 +277,20 @@ module.exports = [
       .addStringOption((o) => o.setName("reason").setDescription("Reason").setRequired(false)),
     async execute(i) {
       const m = await i.guild.members.fetch(i.options.getUser("member").id).catch(() => null);
-      if (!m) return i.reply({ content: "Member not found.", ephemeral: true });
+      if (!m) return i.reply({ embeds: [makeEmbed("Error", "Member not found.", colors.danger)], flags: flagsephemeral });
       const reason = i.options.getString("reason") || "No reason provided";
       await m.timeout(null, reason);
-      await sendLog(i.guild, "security_log_channel", makeEmbed("Timeout Removed", `${m.user.tag}'s timeout was removed.\nReason: ${reason}`));
-      return i.reply({ content: `Removed timeout from ${m.user.tag}.` });
+      await sendlog(
+        i.guild,
+        "securitylogchannel",
+        makeEmbed("Timeout Removed", null, colors.success)
+          .setAuthor({ name: i.user.tag, iconURL: i.user.displayAvatarURL({ dynamic: true }) })
+          .addFields(
+            { name: "Member", value: `${m.user.tag} (\`${m.id}\`)`, inline: true },
+            { name: "Reason", value: reason, inline: false }
+          )
+      );
+      return i.reply({ embeds: [makeEmbed("Timeout Removed", `Removed timeout from ${m.user.tag}.`, colors.success)], flags: flagsephemeral });
     },
   },
 ];

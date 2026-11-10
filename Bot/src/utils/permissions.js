@@ -12,11 +12,11 @@ function allowed(member, key) {
   return hasAnyRole(member, get(member.guild.id)[key] || []);
 }
 
-const canPromote = (m) => allowed(m, "promotion_permissions");
-const canIssueInfractions = (m) => allowed(m, "infraction_permissions");
-const canVoid = (m) => allowed(m, "void_permissions");
-const canReviewAppeals = (m) => allowed(m, "appeal_accept_permissions");
-const canApprovePartnerships = (m) => allowed(m, "partnership_approval_permissions");
+const canPromote = (m) => allowed(m, "promotionpermissions");
+const canIssueInfractions = (m) => allowed(m, "infractionpermissions");
+const canVoid = (m) => allowed(m, "voidpermissions");
+const canReviewAppeals = (m) => allowed(m, "appealacceptpermissions");
+const canApprovePartnerships = (m) => allowed(m, "partnershipapprovalpermissions");
 
 module.exports = {
   hasAnyRole,

@@ -1,9 +1,11 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
-const { makeEmbed, sendLog } = require("../utils/embeds");
-const B = require("../utils/badwords");
+const { makeEmbed, sendlog, colors } = require("../utils/embeds");
+const b = require("../utils/badwords");
+
+const flagsephemeral = 1 << 6;
 
 function audit(i, text) {
-  sendLog(i.guild, "security_log_channel", makeEmbed("Bad-word Filter", text)).catch(
+  sendlog(i.guild, "securitylogchannel", makeEmbed("Bad-word Filter", text, colors.warning)).catch(
     () => {}
   );
 }
@@ -55,21 +57,21 @@ module.exports = [
 
       if (sub === "add") {
         const result = B.add(i.guildId, i.options.getString("word"));
-        if (!result.ok) return i.reply({ content: result.error, ephemeral: true });
+        if (!result.ok) return i.reply({ embeds: [makeEmbed("Error", result.error, colors.danger)], flags: flagsephemeral });
         audit(i, `**${i.user}** added \`${result.word}\` to the filter.`);
         return i.reply({
-          content: `Added \`${result.word}\` to the bad-word filter.`,
-          ephemeral: true,
+          embeds: [makeEmbed("Bad-word Filter", `Added \`${result.word}\` to the filter.`, colors.success)],
+          flags: flagsephemeral,
         });
       }
 
       if (sub === "remove") {
         const result = B.remove(i.guildId, i.options.getString("word"));
-        if (!result.ok) return i.reply({ content: result.error, ephemeral: true });
+        if (!result.ok) return i.reply({ embeds: [makeEmbed("Error", result.error, colors.danger)], flags: flagsephemeral });
         audit(i, `**${i.user}** removed \`${result.word}\` from the filter.`);
         return i.reply({
-          content: `Removed \`${result.word}\` from the bad-word filter.`,
-          ephemeral: true,
+          embeds: [makeEmbed("Bad-word Filter", `Removed \`${result.word}\` from the filter.`, colors.success)],
+          flags: flagsephemeral,
         });
       }
 
@@ -90,39 +92,40 @@ module.exports = [
                 ? list.exemptRoles.map((id) => `<@&${id}>`).join(" ")
                 : "none"
             }`,
-          ].join("\n")
+          ].join("\n"),
+          colors.primary
         );
-        return i.reply({ embeds: [e], ephemeral: true });
+        return i.reply({ embeds: [e], flags: flagsephemeral });
       }
 
       if (sub === "toggle") {
-        const enabled = B.setEnabled(i.guildId, !B.get(i.guildId).enabled);
+        const enabled = B.setenabled(i.guildId, !B.get(i.guildId).enabled);
         audit(i, `**${i.user}** turned the filter ${enabled ? "on" : "off"}.`);
         return i.reply({
-          content: `Bad-word filter turned ${enabled ? "on" : "off"}.`,
-          ephemeral: true,
+          embeds: [makeEmbed("Bad-word Filter", `Bad-word filter turned ${enabled ? "on" : "off"}.`, colors.success)],
+          flags: flagsephemeral,
         });
       }
 
       if (sub === "exempt-add") {
         const role = i.options.getRole("role");
-        const result = B.addExempt(i.guildId, role.id);
-        if (!result.ok) return i.reply({ content: result.error, ephemeral: true });
+        const result = B.addexempt(i.guildId, role.id);
+        if (!result.ok) return i.reply({ embeds: [makeEmbed("Error", result.error, colors.danger)], flags: flagsephemeral });
         audit(i, `**${i.user}** exempted ${role} from the filter.`);
         return i.reply({
-          content: `Messages from ${role} are no longer filtered.`,
-          ephemeral: true,
+          embeds: [makeEmbed("Bad-word Filter", `Messages from ${role} are no longer filtered.`, colors.success)],
+          flags: flagsephemeral,
         });
       }
 
       if (sub === "exempt-remove") {
         const role = i.options.getRole("role");
-        const result = B.removeExempt(i.guildId, role.id);
-        if (!result.ok) return i.reply({ content: result.error, ephemeral: true });
+        const result = B.removeexempt(i.guildId, role.id);
+        if (!result.ok) return i.reply({ embeds: [makeEmbed("Error", result.error, colors.danger)], flags: flagsephemeral });
         audit(i, `**${i.user}** removed the filter exemption from ${role}.`);
         return i.reply({
-          content: `${role} is filtered again.`,
-          ephemeral: true,
+          embeds: [makeEmbed("Bad-word Filter", `${role} is filtered again.`, colors.success)],
+          flags: flagsephemeral,
         });
       }
     },
